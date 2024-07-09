@@ -2,7 +2,7 @@ import axios from "axios";
 
 export const registerUser = async (userData) => {
     const response = await axios.post(
-      "http://127.0.0.1:8000/api/register/",
+      "http://127.0.0.1:8000/api/users/register/",
       userData,
       {
         headers: {
@@ -13,7 +13,7 @@ export const registerUser = async (userData) => {
 };
 
 export const signInUser = async (userData) => {
-    const response = await axios.post("http://127.0.0.1:8000/api/signin/", userData, {
+    const response = await axios.post("http://127.0.0.1:8000/api/users/signin/", userData, {
       headers: {
         "Content-Type": "application/json",
       },
