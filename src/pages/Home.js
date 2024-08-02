@@ -1,6 +1,9 @@
-import React, { useState } from "react";
-import { Box, Heading, Text } from "@chakra-ui/react";
+import React, { useState, useEffect } from 'react';
+import { Box, Heading, Text, SimpleGrid, Button } from '@chakra-ui/react';
 import SurveySiteBox from '../components/SurveySiteBox';
+import { fetchSurveyData, updateStartSurvey } from '../api/fetch';
+import Navbar from '../components/Navbar';
+
 const Home = () => {
   const [surveySites, setSurveySites] = useState([
     {
@@ -10,46 +13,81 @@ const Home = () => {
       totalEarnings: 10,
       isConnected: false,
     },
+    {
+      id: 2,
+      name: 'Swag_Bucks',
+      surveysCompleted: 0,
+      totalEarnings: 0,
+      isConnected: false,
+    },
     // Add more survey sites here as needed
   ]);
 
-  const handleConnect = (id) => {
-    // Logic to handle connecting to a survey site
-    console.log(`Connecting to survey site with id: ${id}`);
-    // Example: Update the state to mark the site as connected
-    setSurveySites((prevSites) =>
-      prevSites.map((site) =>
-        site.id === id ? { ...site, isConnected: true } : site
-      )
-    );
+  useEffect(() => {
+    // Fetch earnings when the component mounts
+    const fetchEarnings = async () => {
+      const survey_data = await fetchSurveyData(); // Ensure this function is defined and works as expected
+      if (survey_data) {
+        console.log('SURVEEEY: ', survey_data);
+        // Update state or handle earnings data
+        setSurveySites((prevSites) =>
+          prevSites.map((site) => {
+            const earningsSite = survey_data.find(
+              (data) => data.survey_site === site.name
+            );
+            return earningsSite
+              ? {
+                  ...site,
+                  totalEarnings: earningsSite.balance,
+                  isConnected: true,
+                }
+              : site;
+          })
+        );
+      }
+    };
+    fetchEarnings();
+  }, []); // Empty dependency array ensures this runs once when component mounts
+
+  const handleStartSurvey = () => {
+    updateStartSurvey(true); // or pass `false` to stop surveys
   };
-  
+
   return (
-    <Box maxW="xl" mx="auto" mt={10} p={5}>
-      <Heading as="h1" size="xl" textAlign="center" mb={5}>
-        Welcome to SurveyBoost
-      </Heading>
+    <Box maxW="1200px" mx="auto" mt={10} p={5} borderRadius="md" boxShadow="md">
+      <Navbar />
 
-      <Text fontSize="xl" textAlign="center">
-        Your go-to platform for surveys!
-      </Text>
-
-      <Box>
-        <Heading as='h1' size='lg' textAlign='center' my={5}>
-          Home
-        </Heading>
+      <SimpleGrid
+        columns={{ base: 1, md: 2, lg: 3 }}
+        spacing={5}
+        alignItems="center"
+        justifyContent="center"
+        pt={5}
+      >
         {surveySites.map((site) => (
           <SurveySiteBox
-            key={site.id}
+            key={site.id} // Add a key prop for React to track elements
             siteName={site.name}
             surveysCompleted={site.surveysCompleted}
             totalEarnings={site.totalEarnings}
             isConnected={site.isConnected}
-            onConnect={() => handleConnect(site.id)}
           />
         ))}
+      </SimpleGrid>
+
+      <Box mt={10} textAlign="right">
+        <Button
+          size="lg"
+          colorScheme="blue"
+          variant="solid"
+          borderRadius="full"
+          px={6}
+          py={4}
+          onClick={handleStartSurvey} // Bind the function to the button
+        >
+          Start Surveys
+        </Button>
       </Box>
-    
     </Box>
   );
 };
