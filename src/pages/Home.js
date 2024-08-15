@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Heading, Text, SimpleGrid, Button } from '@chakra-ui/react';
-import SurveySiteBox from '../components/SurveySiteBox';
-import { fetchSurveyData, updateStartSurvey } from '../api/fetch';
+import { Box, SimpleGrid, Button } from '@chakra-ui/react';
+import { fetchSurveyData, updateStartSurvey, fetchQuestion, updateAnswer } from '../api/fetch';
 import Navbar from '../components/Navbar';
+import QuestionBox from '../components/QuestionBox';
+import SurveySiteBox from '../components/SurveySiteBox';
 
 const Home = () => {
   const [surveySites, setSurveySites] = useState([
@@ -23,6 +24,10 @@ const Home = () => {
     // Add more survey sites here as needed
   ]);
 
+  const [isSurveyRunning, setIsSurveyRunning] = useState(false); // New state for tracking survey status
+  const [currentQuestion, setCurrentQuestion] = useState(null);
+
+  // Pulls information about survey site in boxes
   useEffect(() => {
     // Fetch earnings when the component mounts
     const fetchEarnings = async () => {
@@ -49,8 +54,53 @@ const Home = () => {
     fetchEarnings();
   }, []); // Empty dependency array ensures this runs once when component mounts
 
-  const handleStartSurvey = () => {
-    updateStartSurvey(true); // or pass `false` to stop surveys
+  // Pulls information about Questions 
+  useEffect(() => {
+    let pollingInterval = null;
+
+    const pollForQuestions = async () => {
+      if (isSurveyRunning && currentQuestion === null) {
+        try {
+          const question = await fetchQuestion(); // Ensure this function is defined to fetch the next question
+          if (question) {
+            console.log("question: ", question);
+            setCurrentQuestion(question);
+          }
+        } catch (error) {
+          console.error('Error fetching question:', error);
+        }
+      }
+    };
+
+    if (isSurveyRunning) {
+      // Start polling every 1 second if there is no current question
+      pollingInterval = setInterval(pollForQuestions, 1000); // Poll every 1 second
+    } else {
+      // Stop polling
+      if (pollingInterval) {
+        clearInterval(pollingInterval);
+      }
+    }
+    return () => {
+      if (pollingInterval) {
+        clearInterval(pollingInterval);
+      }
+    };
+  }, [isSurveyRunning, currentQuestion]);
+
+  const handleStartStopSurvey = async () => {
+    // Toggle the survey status and update the button text
+    const newSurveyStatus = !isSurveyRunning;
+    setIsSurveyRunning(newSurveyStatus);
+    await updateStartSurvey(newSurveyStatus); // Pass the new status to updateStartSurvey
+  };
+
+  const handleSubmitQuestion = async (answer, question_id) => {
+    // Handle the question submission
+    updateAnswer(answer, question_id);
+    console.log('Submitted answer:', answer, question_id);
+    // Clear the current question and continue
+    setCurrentQuestion(null);
   };
 
   return (
@@ -83,11 +133,19 @@ const Home = () => {
           borderRadius="full"
           px={6}
           py={4}
-          onClick={handleStartSurvey} // Bind the function to the button
+          onClick={handleStartStopSurvey} // Bind the function to the button
         >
-          Start Surveys
+          {isSurveyRunning ? 'Stop Surveys' : 'Start Surveys'}
         </Button>
       </Box>
+
+      {currentQuestion && (
+        <QuestionBox
+          question={currentQuestion}
+          onSubmit={handleSubmitQuestion}
+        />
+      )}
+
     </Box>
   );
 };
